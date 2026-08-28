@@ -1,169 +1,130 @@
 #include "engine.h"
-#include "SDL2/SDL_error.h"
-#include "log.h"
 #include <SDL2/SDL.h>
-#include <algorithm>
-#include <cstdint>
-#include <memory>
 #include "../graphics/mesh.h"
 #include "../graphics/shader.h"
-
-
+#include <SDL_error.h>
+#include <SDL_version.h>
+#include <cstdint>
+#include <memory>
+#include "log.h"
 namespace eclipse{
-
-engine::engine():mIsInitialized(false),mIsRunning(false){
-  
-}
-
-engine::~engine(){
-  
-}
-
-engine* engine::mInstance = nullptr;
-
-engine& engine::Instance(){
-  if(!mInstance){
-    mInstance = new engine;
-  }
-  return *mInstance;
-}
-
-void engine::Run(){
-  if(Initialize()){
-    while(mIsRunning){
+  engine::engine():mIsInitialized(false),mIsRuning(false){
     
-      // test mesh
+  };
+  engine::~engine(){
+    
+  }
+
+  engine* engine::mInstance = nullptr;
+  engine& engine::Instance(){
+    if(!mInstance){
+      mInstance = new engine;
+    }
+    return *mInstance;
+  }
+
+  void engine::Run(App* app){
+    if(Initialize()){
+      while(mIsRuning){
 
       float vertices[]{
-        -0.5f   ,-0.5f    ,0.f,
-        0.f     ,0.5f     ,0.f,
-        0.5f    ,-0.5f    ,0.f
+        0.5f,0.5f,0.f,
+        0.5f,-0.5f,0.f,
+        -0.5f,-0.5f,0.f,
+        -0.5f,0.5f,0.f
       };
 
-    // std::shared_ptr<graphics::mesh>mesh = std::make_shared<graphics::mesh>(&vertices[0],3,3);
+      uint32_t elements[]{
+        0,3,1,
+        1,3,2
+      };
 
-      mWindow.PollEvents();
-      mWindow.BeginRender();
+      std::shared_ptr<graphics::mesh>mesh = std::make_shared<graphics::mesh>(&vertices[0],4,3,&elements[0],6);
 
-    //   const char* vertexShader = R"(
-    //       #version 410 core
-    //       layout(location = 0) in vec3 position;
-    //        int main(){
-    //          gl_Position = vec4(position,1.0);
-    //        }
-    //     )";
+    const char *vertexShader = R"(
+            #version 410 core
+            layout(location = 0) in vec3 position;
+            out vec3 vertexpos;
+            void main(){
+              vertexpos = position;
+              gl_Position = vec4(position,1.0); 
+            }
+         )";
 
-        
-    //   const char* fragmentShader = R"(
-    //       #version 410 core
-    //       out vec4 outColor;
-    //        int main(){
-    //          outColor = vec4(1.0);
-    //        }
-    //     )";
+    const char *fragmentShader = R"(
+            #version 410 core
+            out vec4 outColor;
+            in vec3 vertexpos;
+            uniform vec3 color = vec3(0.0);
+            void main(){
+              outColor = vec4(vertexpos,1.0);
+            }
+         )";
 
-    // std::shared_ptr<graphics::shader>shader = std::make_shared<graphics::shader>(vertexShader,fragmentShader);
+         std::shared_ptr<graphics::shader>shader = std::make_shared<graphics::shader>(vertexShader,fragmentShader);
 
+         shader -> SetUniformFloat3("color", 1, 0, 0);
 
+        mWindow.PollEvents();
 
-      std::shared_ptr<graphics::mesh> mesh = std::make_shared<graphics::mesh>(&vertices[0],3,3);
+        mWindow.BeginRender();
 
-      const char* vertexShader = R"(
-          #version 410 core
-          layout (location = 0) in vec3;
-          void main(){
-            gl_Position = vec4(position,1.0);
-          }
-        )";
+        auto rc = std::make_unique<graphics::rendercommands::RenderMesh>(mesh,shader);
+        mRenderManager.Submit(std::move(rc));
+        mRenderManager.Flush();
 
-      const char* fragmentShader = R"(
-          #version 410 core
-          out vec4 outColor;
-          void main(){
-            outColor = vec4(1.0);
-          }
-        )";
-
-
-        std::shared_ptr<graphics::shader>shader = std::make_shared<graphics::shader>(vertexShader,fragmentShader);
-
-
-      auto rc = std::make_unique<graphics::rendercommands::RenderMesh>(mesh,shader);
-      mRenderManager.Submit(std::move(rc));
-      mRenderManager.Flush();
-    
-  
-    
-
-      mWindow.EndRender();
+        mWindow.EndRender();
+        }
+        Shutdown();
     }
-    Shutdown();
   }
-}
-
-void engine::Quit(){
-  mIsRunning = false;
-}
-
-
-bool engine::Initialize(){
-  mLogManager.Initialize();
-  ECLIPSE_ASSERT(!mIsInitialized, "Attempting to call engine more than once");
-  GetInfo();
-  bool ret = false;
-  
-
-  if(SDL_Init(SDL_INIT_EVERYTHING)<0){
-    ECLIPSE_ERROR(" Error Initializing SDL {}",SDL_GetError());
-    ret = false;
+  void engine::Quit(){
+    mIsRuning = false;
   }
-  else{
-    SDL_version version;
-    SDL_VERSION(&version);
-    ECLIPSE_INFO("SDL {}.{}.{}",(int)version.major,(int)version.minor,(int)version.patch);
-
-    if(mWindow.Create()){
-
-      mRenderManager.Initialize();
-
-      ret = true;
-      mIsInitialized = true;
-      mIsRunning = true;  
+  bool engine::Initialize(){
+    bool ret = false;
+    mLogManager.Initialize();
+    ECLIPSE_ASSERT(!mIsInitialized, "Tryint to reinitialize engine");
+    GetInfo();
+    if(SDL_Init(SDL_INIT_EVERYTHING)>0){
+      ECLIPSE_ERROR("Error initializing SDL {}",SDL_GetError());
+      ret = false;
+    }else{
+      SDL_version version;
+      SDL_VERSION(&version);
+      ECLIPSE_INFO("SDL {}.{}.{}",(int)version.major ,(int)version.minor,(int)version.patch);
+      if(mWindow.Create()){
+        mRenderManager.Initialize();
+        ret = true;
+        mIsInitialized = true;
+        mIsRuning = true;
+      }
     }
-  }if(!ret){
-    Shutdown();
+    return ret;
+  };
+  void engine::Shutdown(){
+    mLogManager.Shutdown();
+    mRenderManager.Shutdown();
+    mWindow.Shutdown();
+    mIsInitialized = false;
+    mIsRuning = false;
+    SDL_Quit();
   }
-  return ret;
-}
-
-void engine::Shutdown(){
-  mLogManager.Shutdown();
-  mRenderManager.Shutdown();
-  mIsRunning = false;
-  mIsInitialized = false;
-  mWindow.Shutdown();
-  SDL_Quit();
-
-}
-
-
-void engine::GetInfo(){
-#ifdef ECLIPSE_CONFIG_DEBUG
-ECLIPSE_DEBUG("Configuration: DEBUG");
-#endif
-#ifdef ECLIPSE_CONFIG_RELEASE
-ECLIPSE_DEBUG("Configuration: RELEASE");
-#endif
-#ifdef ECLIPSE_PLATFORM_MAC
-ECLIPSE_WARN("Platform: MAC");
-#endif
-#ifdef ECLIPSE_PLATFORM_WINDOWS
-ECLIPSE_WARN("Platform: WINDOWS");
-#endif
-#ifdef ECLIPSE_PLATFORM_LINUX
-ECLIPSE_WARN("Platform: LINUX");
-#endif
-}
-
-  
+  void engine::GetInfo(){
+    #ifdef ECLIPSE_CONFIG_DEBUG
+    ECLIPSE_DEBUG("Configuration: DEBUG");
+    #endif
+    #ifdef ECLIPSE_CONFIG_RELEASE
+    ECLIPSE_DEBUG("Configuration: RELEASE");
+    #endif
+    #ifdef ECLIPSE_PLATFORM_MAC
+    ECLIPSE_WARN("Platform: MAC");
+    #endif
+    #ifdef ECLIPSE_PLATFORM_LINUX
+    ECLIPSE_WARN("Platform: LINUX");
+    #endif
+    #ifdef ECLIPSE_PLATFORM_WINDOWS
+    ECLIPSE_WARN("Platform: WINDOWS");
+    #endif
+  }
 }

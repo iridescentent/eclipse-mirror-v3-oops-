@@ -2,14 +2,14 @@
 print("[premake] generating project files...")
 
 workspace "eclipse"
-  startproject "eclipseeditor"
-  architecture "ARM64"
+    startproject "eclipseeditor"
+    architecture "ARM64"
 
-  configurations
-  {
-    "Debug",
-    "Release"
-  }
+    configurations
+    {
+        "Debug",
+        "Release"
+    }
 
 tdir = "bin/%{cfg.buildcfg}/%{prj.name}"
 odir = "bin-obj/%{cfg.buildcfg}/%{prj.name}"
@@ -31,6 +31,11 @@ project "eclipse"
 
     files
     {
+        "%{prj.name}/include/**.h",
+        "%{prj.name}/include/**.hpp",
+        "%{prj.name}/include/**.cpp",
+        "%{prj.name}/src/**.h",
+        "%{prj.name}/src/**.cpp",
         "src/**.h",
         "src/**.cpp",
         "core/**.h",
@@ -39,6 +44,8 @@ project "eclipse"
         "managers/**.cpp",
         "graphics/**.h",
         "graphics/**.cpp",
+        "input/**.h",
+        "input/**.cpp",
         "external/glad/src/glad.c"
     }
 
@@ -47,18 +54,28 @@ project "eclipse"
         "src/main.cpp"
     }
 
+    sysincludedirs
+    {
+        "%{prj.name}/include",
+        "/opt/homebrew/include",
+        "/opt/homebrew/include/SDL2",
+        "%{externals.spdlog}/include",
+        "%{externals.glad}/include"
+    }
+
     includedirs
     {
         "src",
         "core",
         "managers",
         "graphics",
-        "/opt/homebrew/include",
-        "%{externals.spdlog}/include",
-        "%{externals.glad}/include"
+        "input"
     }
 
-    fatalwarnings {}
+    flags
+    {
+        "FatalWarnings"
+    }
 
     defines
     {
@@ -124,17 +141,27 @@ project "eclipseeditor"
         "src/main.cpp"
     }
 
+    sysincludedirs
+    {
+        "eclipse/include",
+        "/opt/homebrew/include",
+        "/opt/homebrew/include/SDL2",
+        "%{externals.spdlog}/include"
+    }
+
     includedirs
     {
         "src",
         "core",
         "managers",
-        "/opt/homebrew/include",
-        "%{externals.spdlog}/include",
-        "%{externals.glad}/include"
+        "graphics",
+        "input"
     }
 
-    fatalwarnings {}
+    flags
+    {
+        "FatalWarnings"
+    }
 
     filter {"system:windows", "configurations:*"}
         systemversion "latest"
