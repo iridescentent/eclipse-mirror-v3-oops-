@@ -10,7 +10,6 @@ namespace eclipse::graphics{
       ~shader();
       void Bind();
       void Unbind();
-
       void SetUniformInt(const std::string& name, int val);
       void SetUniformFloat(const std::string& name, float val);
       void SetUniformFloat2(const std::string& name, float val1, float val2);
@@ -18,10 +17,8 @@ namespace eclipse::graphics{
       void SetUniformFloat4(const std::string& name, float val1, float val2, float val3, float val4);
 
     private:
+      int GetUniformLocation(const std::string& name);
       uint32_t mProgramId;
-      int GetUniformLocations(const std::string& name);
       std::unordered_map<std::string, int>mGetUniformLocations;
-
-
   };
 }

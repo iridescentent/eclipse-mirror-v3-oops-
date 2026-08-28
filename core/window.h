@@ -1,6 +1,6 @@
 #pragma once
-#include "SDL2/SDL_video.h"
 #include <SDL2/SDL.h>
+#include <SDL_video.h>
 
 struct SDL_Window;
 using SDL_GLContext = void*;
@@ -15,8 +15,9 @@ namespace eclipse::core{
       void PollEvents();
       void BeginRender();
       void EndRender();
+      
     private:
       SDL_Window* mWindow;
-      SDL_GLContext mGLContext;
+      SDL_GLContext mGLContext;      
   };
 }
