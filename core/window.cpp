@@ -34,12 +34,24 @@ SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 SDL_SetWindowMinimumSize(mWindow, 200, 200);
 
 mGLContext = SDL_GL_CreateContext(mWindow);
-if(!mWindow){
+if(!mGLContext){
   ECLIPSE_ERROR("Error creating SDL GL Context {}",SDL_GetError());
+  SDL_DestroyWindow(mWindow);
+  mWindow = nullptr;
   return false;
 }
 
-gladLoadGLLoader(SDL_GL_GetProcAddress);
+if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
+  ECLIPSE_ERROR("Error loading OpenGL functions");
+  Shutdown();
+  return false;
+}
+
+if (!mImGui.Initialize(mWindow, mGLContext)) {
+  ECLIPSE_ERROR("Error initializing ImGui");
+  Shutdown();
+  return false;
+}
 
 // glEnable(GL_DEPTH_TEST);
 // glDepthFunc(GL_LEQUAL);
@@ -52,14 +64,17 @@ gladLoadGLLoader(SDL_GL_GetProcAddress);
   void window::BeginRender(){
     // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     engine::Instance().GetRenderManager().Clear();
+    mImGui.NewFrame();
   }
 
   void window::EndRender(){
+    mImGui.Render();
     SDL_GL_SwapWindow(mWindow);
   }
 
   
   void window::Shutdown(){
+    mImGui.Shutdown();
     SDL_DestroyWindow(mWindow);
     SDL_GL_DeleteContext(mGLContext);
     mGLContext = nullptr;
@@ -68,6 +83,7 @@ gladLoadGLLoader(SDL_GL_GetProcAddress);
   void window::PollEvents(){
     SDL_Event event;
     while(SDL_PollEvent(&event)){
+      mImGui.ProcessEvent(&event);
       switch(event.type){
         case SDL_QUIT:
           engine::Instance().Quit();

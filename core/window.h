@@ -1,6 +1,7 @@
 #pragma once
 #include <SDL2/SDL.h>
 #include <SDL_video.h>
+#include "imguiwindow.h"
 
 struct SDL_Window;
 using SDL_GLContext = void*;
@@ -19,5 +20,6 @@ namespace eclipse::core{
     private:
       SDL_Window* mWindow;
       SDL_GLContext mGLContext;      
+      imguiwindow mImGui;
   };
 }
